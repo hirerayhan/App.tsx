@@ -1,748 +1,564 @@
 <!DOCTYPE html>
-<html lang="en" class="dark">
+<html lang="en">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>AudioExtract Pro - MP4 to MP3</title>
+    <title>MP4 to MP3 Converter - SaaS</title>
     
     <!-- Tailwind CSS -->
     <script src="https://cdn.tailwindcss.com"></script>
     
-    <!-- Phosphor Icons (Alternative to Lucide for Vanilla HTML) -->
-    <script src="https://unpkg.com/@phosphor-icons/web"></script>
-
-    <script>
-        tailwind.config = {
-            darkMode: 'class',
-            theme: {
-                extend: {
-                    fontFamily: { sans: ['Inter', 'sans-serif'] },
-                    animation: {
-                        'pulse-fast': 'pulse 1.5s cubic-bezier(0.4, 0, 0.6, 1) infinite',
-                    }
-                }
-            }
-        }
-    </script>
+    <!-- Feather Icons -->
+    <script src="https://unpkg.com/feather-icons"></script>
 
     <style>
-        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
-        
-        body {
-            font-family: 'Inter', sans-serif;
-            background-color: #060913;
-            color: #e2e8f0;
-            overflow-x: hidden;
-        }
-
         /* Custom Scrollbar */
-        ::-webkit-scrollbar { width: 6px; height: 6px; }
-        ::-webkit-scrollbar-track { background: transparent; }
-        ::-webkit-scrollbar-thumb { background: #334155; border-radius: 10px; }
-        ::-webkit-scrollbar-thumb:hover { background: #475569; }
-
-        /* Animations */
-        @keyframes shimmer {
-            0% { transform: translateX(-100%) skewX(-12deg); }
-            100% { transform: translateX(200%) skewX(-12deg); }
-        }
-        .animate-shimmer {
-            animation: shimmer 2s infinite;
-            background-image: linear-gradient(90deg, transparent, rgba(255,255,255,0.3), transparent);
-        }
-
-        @keyframes slideIn {
-            from { opacity: 0; transform: translateY(20px) scale(0.95); }
-            to { opacity: 1; transform: translateY(0) scale(1); }
-        }
-        .toast-enter { animation: slideIn 0.3s ease-out forwards; }
-
-        @keyframes visualizer {
-            0%, 100% { height: 10%; opacity: 0.5; }
-            50% { height: 100%; opacity: 1; }
-        }
-        .bar-anim { animation: visualizer ease-in-out infinite; }
-
-        /* Background Grid */
-        .bg-grid {
-            background-image: linear-gradient(to right, rgba(255,255,255,0.05) 1px, transparent 1px), 
-                              linear-gradient(to bottom, rgba(255,255,255,0.05) 1px, transparent 1px);
-            background-size: 40px 40px;
-        }
+        .custom-scrollbar::-webkit-scrollbar { width: 6px; }
+        .custom-scrollbar::-webkit-scrollbar-track { background: transparent; }
+        .custom-scrollbar::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.1); border-radius: 10px; }
+        .custom-scrollbar::-webkit-scrollbar-thumb:hover { background: rgba(255,255,255,0.2); }
         
-        /* Hide pages by default */
-        .page { display: none; }
-        .page.active { display: block; animation: slideIn 0.4s ease-out; }
+        /* Animations */
+        .animate-spin-slow { animation: spin 3s linear infinite; }
+        @keyframes spin { 100% { transform: rotate(360deg); } }
+        
+        .fade-in { animation: fadeIn 0.3s ease-in-out; }
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+
+        /* View Switching */
+        .view-section { display: none; }
+        .view-section.active { display: block; animation: fadeIn 0.4s ease-out forwards; }
     </style>
 </head>
-<body class="selection:bg-indigo-500/30">
+<body class="bg-neutral-950 text-neutral-200 font-sans h-screen overflow-hidden flex selection:bg-blue-500/30">
 
-    <!-- Background Elements -->
-    <div class="fixed inset-0 z-0 pointer-events-none bg-grid"></div>
-    <div class="fixed top-[-20%] left-[-10%] w-[50%] h-[50%] rounded-full bg-indigo-900/20 blur-[120px] pointer-events-none z-0"></div>
-    <div class="fixed bottom-[-20%] right-[-10%] w-[40%] h-[40%] rounded-full bg-purple-900/20 blur-[120px] pointer-events-none z-0"></div>
-
-    <!-- Toast Container -->
-    <div id="toast-container" class="fixed bottom-4 right-4 z-50 flex flex-col gap-2"></div>
-
-    <!-- Desktop Sidebar -->
-    <aside class="w-64 bg-[#0B0F19] border-r border-slate-800/80 hidden md:flex flex-col h-screen fixed left-0 top-0 z-40">
-        <div class="p-6 flex items-center gap-3">
-            <div class="w-8 h-8 rounded-lg bg-gradient-to-br from-indigo-500 to-purple-600 flex items-center justify-center shadow-lg shadow-indigo-500/20">
-                <i class="ph ph-lightning text-white font-bold"></i>
+    <!-- Sidebar -->
+    <aside class="w-72 bg-neutral-900/40 border-r border-white/5 backdrop-blur-2xl flex flex-col z-20">
+        <div class="h-20 flex items-center px-8 border-b border-white/5">
+            <div class="w-8 h-8 bg-gradient-to-tr from-blue-600 to-purple-600 rounded-lg flex items-center justify-center shadow-lg shadow-blue-500/20 mr-3">
+                <i data-feather="music" class="w-4 h-4 text-white"></i>
             </div>
-            <span class="text-lg font-bold bg-gradient-to-r from-white to-slate-400 bg-clip-text text-transparent tracking-tight">AudioExtract Pro</span>
+            <h1 class="text-xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-white to-neutral-400 tracking-tight">Convert<span class="text-blue-500">SaaS</span></h1>
+        </div>
+        
+        <div class="flex-1 overflow-y-auto py-8 px-4 space-y-1" id="nav-menu">
+            <button onclick="switchView('dashboard')" class="nav-btn active w-full flex items-center gap-3 px-4 py-3 rounded-xl transition-all text-sm font-medium bg-blue-600 text-white shadow-[0_0_15px_rgba(37,99,235,0.3)]" data-target="dashboard">
+                <i data-feather="layout" class="w-5 h-5"></i> Queue & Convert <i data-feather="chevron-right" class="w-4 h-4 ml-auto opacity-50"></i>
+            </button>
+            <button onclick="switchView('analytics')" class="nav-btn w-full flex items-center gap-3 px-4 py-3 rounded-xl transition-all text-sm font-medium text-neutral-400 hover:bg-white/5 hover:text-white" data-target="analytics">
+                <i data-feather="bar-chart-2" class="w-5 h-5"></i> Analytics
+            </button>
+            <button onclick="switchView('billing')" class="nav-btn w-full flex items-center gap-3 px-4 py-3 rounded-xl transition-all text-sm font-medium text-neutral-400 hover:bg-white/5 hover:text-white" data-target="billing">
+                <i data-feather="credit-card" class="w-5 h-5"></i> Subscription
+            </button>
+            <button onclick="switchView('plugin')" class="nav-btn w-full flex items-center gap-3 px-4 py-3 rounded-xl transition-all text-sm font-medium text-neutral-400 hover:bg-white/5 hover:text-white" data-target="plugin">
+                <i data-feather="globe" class="w-5 h-5"></i> WP Plugin
+            </button>
         </div>
 
-        <nav class="flex-1 px-4 py-6 space-y-1" id="desktop-nav">
-            <!-- Nav Items generated by JS -->
-        </nav>
-
-        <div class="p-4 m-4 rounded-xl bg-gradient-to-br from-slate-900 to-slate-800 border border-slate-700/50">
-            <div class="text-xs text-slate-400 mb-2">Storage Usage</div>
-            <div class="h-1.5 bg-slate-950 rounded-full overflow-hidden mb-2">
-                <div class="h-full bg-indigo-500 w-[68%]"></div>
+        <!-- User Profile Card -->
+        <div class="p-4 border-t border-white/5">
+            <div class="bg-[#1a1a1a] p-4 rounded-2xl border border-white/5">
+                <div class="flex items-center gap-3 mb-4">
+                    <div class="w-10 h-10 rounded-full bg-[#2a2a2a] flex items-center justify-center">
+                        <i data-feather="user" class="w-5 h-5 text-neutral-400"></i>
+                    </div>
+                    <div>
+                        <p class="text-[15px] font-bold text-white tracking-wide">RAYHAN BISWAS</p>
+                        <p class="text-[13px] text-blue-500 font-medium mt-0.5">Pro Plan</p>
+                    </div>
+                </div>
+                <div class="space-y-2">
+                    <div class="flex justify-between text-xs">
+                        <span class="text-neutral-500">Daily Usage</span>
+                        <span class="text-white">12 / 10,000</span>
+                    </div>
+                    <div class="h-1.5 w-full bg-neutral-800 rounded-full overflow-hidden">
+                        <div class="h-full bg-blue-500 w-[5%]"></div>
+                    </div>
+                </div>
             </div>
-            <div class="text-[10px] text-slate-500 text-right">6.8 GB Local Cache</div>
         </div>
     </aside>
 
-    <!-- Main Content Area -->
-    <main class="md:pl-64 pt-6 md:pt-12 px-4 sm:px-8 pb-24 md:pb-12 relative z-10 min-h-screen">
+    <!-- Main Content -->
+    <main class="flex-1 flex flex-col min-w-0 bg-[radial-gradient(ellipse_at_top,_var(--tw-gradient-stops))] from-neutral-900/50 via-neutral-950 to-neutral-950">
+        <!-- Header -->
+        <header class="h-20 flex items-center justify-between px-8 border-b border-white/5 backdrop-blur-md z-10 sticky top-0">
+            <div class="flex items-center gap-4 flex-1">
+                <div class="relative w-96 hidden md:block">
+                    <i data-feather="search" class="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-neutral-500"></i>
+                    <input type="text" placeholder="Search conversions, logs, analytics..." class="w-full bg-neutral-900/50 border border-white/10 rounded-full pl-10 pr-4 py-2 text-sm text-white placeholder-neutral-500 focus:outline-none focus:border-blue-500/50 transition-colors">
+                </div>
+            </div>
+            <div class="flex items-center gap-4">
+                <button class="relative p-2 rounded-full hover:bg-white/5 text-neutral-400 hover:text-white transition-all">
+                    <i data-feather="bell" class="w-5 h-5"></i>
+                    <span class="absolute top-1 right-1 w-2 h-2 bg-blue-500 rounded-full border border-neutral-900"></span>
+                </button>
+                <button class="hidden sm:flex bg-blue-600 hover:bg-blue-500 text-white shadow-[0_0_15px_rgba(37,99,235,0.4)] inline-flex items-center justify-center px-4 py-2 text-sm font-medium transition-all rounded-xl active:scale-95">
+                    New Conversion
+                </button>
+            </div>
+        </header>
         
-        <!-- PAGE 1: CONVERTER -->
-        <div id="page-converter" class="page active max-w-5xl mx-auto space-y-8">
-            <header class="mb-8">
-                <h1 class="text-3xl font-bold text-white mb-2 tracking-tight">MP4 to MP3 Converter</h1>
-                <p class="text-slate-400">Enterprise-grade client-side media extraction tool.</p>
-            </header>
-
-            <div class="grid grid-cols-1 lg:grid-cols-3 gap-8">
-                <div class="lg:col-span-2 space-y-6">
+        <!-- View Container -->
+        <div class="flex-1 overflow-y-auto p-8 custom-scrollbar">
+            <div class="max-w-7xl mx-auto">
+                
+                <!-- VIEW: Dashboard -->
+                <div id="view-dashboard" class="view-section active space-y-6">
                     <!-- Dropzone -->
-                    <div id="dropzone" class="relative group flex flex-col items-center justify-center w-full p-12 border-2 border-dashed border-slate-700 hover:border-slate-500 hover:bg-slate-800/40 rounded-3xl transition-all duration-300 bg-slate-900/20 backdrop-blur-sm cursor-pointer">
-                        <input type="file" id="fileInput" multiple accept="video/mp4,video/x-m4v" class="hidden">
-                        
-                        <div class="absolute inset-0 overflow-hidden rounded-3xl pointer-events-none">
-                            <div class="absolute -top-24 -right-24 w-64 h-64 bg-indigo-500/10 blur-[80px] rounded-full group-hover:bg-indigo-500/20 transition-all duration-700"></div>
-                            <div class="absolute -bottom-24 -left-24 w-64 h-64 bg-purple-500/10 blur-[80px] rounded-full group-hover:bg-purple-500/20 transition-all duration-700"></div>
-                        </div>
-
-                        <div id="dropzone-icon" class="p-5 rounded-2xl mb-6 transition-all duration-300 bg-slate-800 shadow-xl text-slate-400 group-hover:text-indigo-400">
-                            <i class="ph ph-cloud-arrow-up text-4xl"></i>
-                        </div>
-                        <h3 class="text-xl font-bold text-slate-200 mb-2 text-center">Drag & Drop your MP4 files here</h3>
-                        <p class="text-sm text-slate-500 text-center max-w-sm mb-8">
-                            Enterprise-grade WebAssembly conversion engine. Everything runs locally in your browser. No data leaves your machine.
-                        </p>
-                        
-                        <button onclick="document.getElementById('fileInput').click()" class="inline-flex items-center justify-center font-medium rounded-xl transition-all duration-300 active:scale-95 bg-gradient-to-r from-indigo-500 to-purple-600 hover:from-indigo-400 hover:to-purple-500 text-white shadow-lg shadow-indigo-500/25 border border-indigo-400/20 text-base px-6 py-3 gap-2.5">
-                            <i class="ph ph-file-video text-xl"></i> Select Files
-                        </button>
-
-                        <div class="flex gap-4 mt-8 text-xs font-medium text-slate-500 pointer-events-none">
-                            <span class="flex items-center gap-1"><i class="ph ph-shield-check"></i> Client-side Processing</span>
-                            <span class="flex items-center gap-1"><i class="ph ph-lightning"></i> High-Speed WASM</span>
-                            <span class="flex items-center gap-1"><i class="ph ph-stack"></i> Batch Support</span>
+                    <div class="bg-neutral-900/60 backdrop-blur-xl border border-white/5 rounded-2xl shadow-2xl overflow-hidden p-8 relative">
+                        <input type="file" id="file-upload" multiple accept="video/mp4" class="hidden" onchange="handleFiles(this.files)">
+                        <div id="dropzone" onclick="document.getElementById('file-upload').click()" 
+                             class="border-2 border-dashed border-neutral-700 hover:border-blue-500/50 hover:bg-white/5 rounded-xl flex flex-col items-center justify-center p-12 transition-all cursor-pointer group">
+                            <div class="w-20 h-20 rounded-full bg-blue-500/20 flex items-center justify-center mb-6 group-hover:scale-110 transition-transform">
+                                <i data-feather="upload-cloud" class="w-10 h-10 text-blue-400"></i>
+                            </div>
+                            <h3 class="text-2xl font-bold text-white mb-2">Drop MP4 files here</h3>
+                            <p class="text-neutral-400 text-center max-w-sm">Enterprise-grade multi-file processing engine. Drag & drop up to 50 files or click to browse.</p>
+                            <div class="mt-8 flex gap-4 text-sm text-neutral-500">
+                                <span class="flex items-center gap-1"><i data-feather="zap" class="w-4 h-4"></i> 10x Fast Speed</span>
+                                <span class="flex items-center gap-1"><i data-feather="lock" class="w-4 h-4"></i> 256-bit Secure</span>
+                            </div>
                         </div>
                     </div>
 
-                    <!-- Queue Area -->
-                    <div id="queue-container" class="bg-slate-900/40 backdrop-blur-xl border border-slate-800/60 rounded-2xl shadow-xl overflow-hidden hidden">
-                        <div class="flex items-center justify-between p-4 bg-slate-900/80 border-b border-slate-800">
-                            <h3 class="font-semibold text-slate-200 flex items-center gap-2">
-                                <i class="ph ph-activity text-indigo-400"></i> Active Queue
-                            </h3>
-                            <div class="flex gap-2 text-xs" id="queue-stats">
-                                <span class="px-2.5 py-0.5 rounded-full text-xs font-medium border backdrop-blur-sm bg-blue-500/10 text-blue-400 border-blue-500/20">0 Processing</span>
-                                <span class="px-2.5 py-0.5 rounded-full text-xs font-medium border backdrop-blur-sm bg-slate-800/50 text-slate-400 border-slate-700">0 Queued</span>
+                    <!-- Queue Grid -->
+                    <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                        <!-- Active Queue -->
+                        <div class="bg-neutral-900/60 backdrop-blur-xl border border-white/5 rounded-2xl shadow-2xl p-6 h-[500px] flex flex-col">
+                            <div class="flex justify-between items-center mb-6">
+                                <h3 class="text-lg font-semibold text-white flex items-center gap-2">
+                                    <i data-feather="loader" id="active-spinner" class="w-5 h-5 text-neutral-500"></i>
+                                    Active Queue (<span id="active-count">0</span>)
+                                </h3>
+                                <span class="text-xs text-neutral-400">Processing up to 3 parallel jobs</span>
+                            </div>
+                            <div id="active-queue-list" class="flex-1 overflow-y-auto space-y-3 pr-2 custom-scrollbar">
+                                <div class="h-full flex flex-col items-center justify-center text-neutral-500 space-y-4">
+                                    <i data-feather="server" class="w-12 h-12 opacity-20"></i>
+                                    <p>Queue is empty. Upload files to begin.</p>
+                                </div>
                             </div>
                         </div>
-                        <div id="tasks-list" class="max-h-[500px] overflow-y-auto custom-scrollbar">
-                            <!-- Tasks will be injected here -->
+
+                        <!-- Finished Log -->
+                        <div class="bg-neutral-900/60 backdrop-blur-xl border border-white/5 rounded-2xl shadow-2xl p-6 h-[500px] flex flex-col">
+                            <div class="flex justify-between items-center mb-6">
+                                <h3 class="text-lg font-semibold text-white flex items-center gap-2">
+                                    <i data-feather="check-circle" class="w-5 h-5 text-emerald-400"></i> Finished Log
+                                </h3>
+                                <button onclick="clearCompleted()" class="text-xs py-1 hover:bg-white/5 text-neutral-400 hover:text-white px-3 rounded-lg border border-white/10">Clear</button>
+                            </div>
+                            <div id="finished-queue-list" class="flex-1 overflow-y-auto space-y-3 pr-2 custom-scrollbar">
+                                <div class="h-full flex items-center justify-center text-neutral-500">
+                                    <p>No completed jobs yet.</p>
+                                </div>
+                            </div>
                         </div>
                     </div>
                 </div>
 
-                <!-- Right Sidebar -->
-                <div class="space-y-6">
-                    <div class="bg-gradient-to-br from-indigo-900/20 to-purple-900/20 backdrop-blur-xl border border-indigo-500/20 rounded-2xl p-6 shadow-xl">
-                        <h3 class="text-sm font-semibold text-indigo-300 uppercase tracking-wider mb-4 flex items-center gap-2">
-                            <i class="ph ph-cpu"></i> System Status
-                        </h3>
-                        <div class="space-y-4">
-                            <div>
-                                <div class="flex justify-between text-xs text-slate-400 mb-1">
-                                    <span>WASM Engine Core</span>
-                                    <span class="text-emerald-400">Online</span>
+                <!-- VIEW: Analytics -->
+                <div id="view-analytics" class="view-section space-y-6 fade-in">
+                    <div class="grid grid-cols-1 md:grid-cols-4 gap-4">
+                        <!-- Stat Cards -->
+                        <div class="bg-neutral-900/60 backdrop-blur-xl border border-white/5 rounded-2xl p-6">
+                            <div class="flex justify-between items-start">
+                                <div>
+                                    <p class="text-neutral-400 text-sm">Total Conversions</p>
+                                    <h4 class="text-2xl font-bold text-white mt-2">14,204</h4>
                                 </div>
-                                <div class="h-1.5 w-full bg-slate-800 rounded-full overflow-hidden">
-                                    <div class="h-full bg-emerald-500 w-full animate-pulse-fast"></div>
-                                </div>
+                                <div class="p-3 rounded-xl bg-white/5 text-blue-400"><i data-feather="bar-chart-2"></i></div>
                             </div>
-                            <div>
-                                <div class="flex justify-between text-xs text-slate-400 mb-1">
-                                    <span id="mem-label">Memory Usage</span>
-                                    <span id="mem-value">45%</span>
+                        </div>
+                        <div class="bg-neutral-900/60 backdrop-blur-xl border border-white/5 rounded-2xl p-6">
+                            <div class="flex justify-between items-start">
+                                <div>
+                                    <p class="text-neutral-400 text-sm">Data Processed</p>
+                                    <h4 class="text-2xl font-bold text-white mt-2">1.2 TB</h4>
                                 </div>
-                                <div class="h-1.5 w-full bg-slate-800 rounded-full overflow-hidden">
-                                    <div id="mem-bar" class="h-full bg-indigo-500 transition-all duration-500" style="width: 45%;"></div>
-                                </div>
+                                <div class="p-3 rounded-xl bg-white/5 text-purple-400"><i data-feather="server"></i></div>
                             </div>
-                            <div class="pt-4 border-t border-slate-800/50">
-                                <div class="text-xs text-slate-500 flex justify-between">
-                                    <span>Concurrency Limit</span>
-                                    <span class="text-slate-300" id="stat-concurrency">3 Threads</span>
+                        </div>
+                        <div class="bg-neutral-900/60 backdrop-blur-xl border border-white/5 rounded-2xl p-6">
+                            <div class="flex justify-between items-start">
+                                <div>
+                                    <p class="text-neutral-400 text-sm">Success Rate</p>
+                                    <h4 class="text-2xl font-bold text-white mt-2">99.8%</h4>
                                 </div>
-                                <div class="text-xs text-slate-500 flex justify-between mt-2">
-                                    <span>Output Quality</span>
-                                    <span class="text-slate-300" id="stat-bitrate">320k CBR</span>
+                                <div class="p-3 rounded-xl bg-white/5 text-emerald-400"><i data-feather="check-circle"></i></div>
+                            </div>
+                        </div>
+                        <div class="bg-neutral-900/60 backdrop-blur-xl border border-white/5 rounded-2xl p-6">
+                            <div class="flex justify-between items-start">
+                                <div>
+                                    <p class="text-neutral-400 text-sm">Avg Speed</p>
+                                    <h4 class="text-2xl font-bold text-white mt-2">45 MB/s</h4>
                                 </div>
+                                <div class="p-3 rounded-xl bg-white/5 text-amber-400"><i data-feather="zap"></i></div>
                             </div>
                         </div>
                     </div>
                     
-                    <!-- Terminal -->
-                    <div class="bg-[#0D1117] border border-slate-800 rounded-xl overflow-hidden shadow-2xl flex flex-col h-[400px]">
-                        <div class="flex items-center justify-between px-4 py-2.5 bg-[#161B22] border-b border-slate-800">
-                            <div class="flex items-center gap-2 text-xs font-mono text-slate-400">
-                                <i class="ph ph-terminal"></i> Engine Logs (tty1)
-                            </div>
-                            <div class="flex gap-1.5">
-                                <div class="w-3 h-3 rounded-full bg-red-500/20 border border-red-500/50"></div>
-                                <div class="w-3 h-3 rounded-full bg-amber-500/20 border border-amber-500/50"></div>
-                                <div class="w-3 h-3 rounded-full bg-emerald-500/20 border border-emerald-500/50"></div>
-                            </div>
-                        </div>
-                        <div id="terminal-logs" class="flex-1 overflow-y-auto p-4 font-mono text-[11px] sm:text-xs leading-relaxed custom-scrollbar text-slate-300">
-                            <!-- Logs injected here -->
-                            <div class="text-slate-600 italic">Waiting for engine initialization...</div>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        </div>
-
-        <!-- PAGE 2: HISTORY -->
-        <div id="page-history" class="page max-w-6xl mx-auto space-y-8">
-            <header class="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-8 gap-4">
-                <div>
-                    <h1 class="text-3xl font-bold text-white mb-2">Conversion History</h1>
-                    <p class="text-slate-400">Review past exports, errors, and metadata logs.</p>
-                </div>
-                <div class="flex gap-3 w-full sm:w-auto">
-                    <button onclick="clearHistory()" class="inline-flex items-center justify-center font-medium rounded-xl transition-all duration-300 bg-red-500/10 hover:bg-red-500/20 text-red-500 border border-red-500/20 text-sm px-4 py-2 gap-2">
-                        <i class="ph ph-trash"></i> Clear All
-                    </button>
-                </div>
-            </header>
-
-            <div class="bg-slate-900/40 backdrop-blur-xl border border-slate-800/60 rounded-2xl shadow-xl overflow-hidden">
-                <div class="overflow-x-auto">
-                    <table class="w-full text-left border-collapse">
-                        <thead>
-                            <tr class="bg-slate-900/80 border-b border-slate-800 text-xs uppercase tracking-wider text-slate-500 font-semibold">
-                                <th class="p-4">File Name</th>
-                                <th class="p-4">Date</th>
-                                <th class="p-4">Size</th>
-                                <th class="p-4">Status</th>
-                            </tr>
-                        </thead>
-                        <tbody id="history-table" class="divide-y divide-slate-800/50">
-                            <!-- History generated by JS -->
-                        </tbody>
-                    </table>
-                </div>
-            </div>
-        </div>
-
-        <!-- PAGE 3: SETTINGS -->
-        <div id="page-settings" class="page max-w-4xl mx-auto space-y-8 pb-20">
-            <header class="mb-8">
-                <h1 class="text-3xl font-bold text-white mb-2">Preferences & Settings</h1>
-                <p class="text-slate-400">Configure engine parameters and application behavior.</p>
-            </header>
-
-            <div class="space-y-6">
-                <div class="bg-slate-900/40 backdrop-blur-xl border border-slate-800/60 rounded-2xl p-6 shadow-xl">
-                    <h3 class="text-lg font-semibold text-slate-200 mb-6 border-b border-slate-800 pb-4">Extraction Engine</h3>
-                    <div class="space-y-4">
-                        <div class="flex flex-col sm:flex-row sm:items-center justify-between">
-                            <div>
-                                <div class="text-sm font-medium text-slate-200">Audio Bitrate Quality</div>
-                                <div class="text-xs text-slate-500 mt-0.5">Constant bitrate encoding for MP3 output.</div>
-                            </div>
-                            <select id="setting-bitrate" onchange="updateSetting('audioBitrate', this.value)" class="mt-3 sm:mt-0 bg-slate-900 border border-slate-700 text-slate-300 text-sm rounded-lg focus:ring-indigo-500 focus:border-indigo-500 block w-full sm:w-32 p-2.5 outline-none">
-                                <option value="128k">128 kbps</option>
-                                <option value="192k">192 kbps</option>
-                                <option value="256k">256 kbps</option>
-                                <option value="320k" selected>320 kbps (HQ)</option>
-                            </select>
-                        </div>
-                        <div class="flex flex-col sm:flex-row sm:items-center justify-between pt-2">
-                            <div>
-                                <div class="text-sm font-medium text-slate-200">Max Concurrent Threads</div>
-                                <div class="text-xs text-slate-500 mt-0.5">Number of files to process simultaneously.</div>
-                            </div>
-                            <select id="setting-threads" onchange="updateSetting('maxConcurrent', parseInt(this.value))" class="mt-3 sm:mt-0 bg-slate-900 border border-slate-700 text-slate-300 text-sm rounded-lg focus:ring-indigo-500 focus:border-indigo-500 block w-full sm:w-32 p-2.5 outline-none">
-                                <option value="1">1 (Safe)</option>
-                                <option value="2">2</option>
-                                <option value="3" selected>3 (Recommended)</option>
-                                <option value="5">5 (High CPU)</option>
-                            </select>
+                    <!-- Chart Mockup -->
+                    <div class="bg-neutral-900/60 backdrop-blur-xl border border-white/5 rounded-2xl p-6 h-[400px]">
+                        <h3 class="text-lg font-semibold text-white mb-6">Conversion Volume (Last 14 Days)</h3>
+                        <div class="flex items-end gap-2 h-64 mt-8" id="mock-chart">
+                            <!-- Chart bars injected via JS -->
                         </div>
                     </div>
                 </div>
 
-                <div class="bg-slate-900/40 backdrop-blur-xl border border-slate-800/60 rounded-2xl p-6 shadow-xl">
-                    <h3 class="text-lg font-semibold text-slate-200 mb-6 border-b border-slate-800 pb-4">Application Behavior</h3>
-                    <div class="space-y-4">
-                        <label class="flex items-center justify-between cursor-pointer">
-                            <div>
-                                <div class="text-sm font-medium text-slate-200">Auto-Download</div>
-                                <div class="text-xs text-slate-500 mt-0.5">Automatically save MP3 files to downloads.</div>
+                <!-- VIEW: Pricing -->
+                <div id="view-billing" class="view-section py-8 fade-in">
+                    <div class="text-center mb-12">
+                        <h2 class="text-3xl font-bold text-white mb-4">Enterprise-Grade Audio Processing</h2>
+                        <p class="text-neutral-400 max-w-xl mx-auto">Scale your infrastructure with our robust API and high-speed processing clusters.</p>
+                    </div>
+                    <div class="grid grid-cols-1 md:grid-cols-3 gap-8 max-w-5xl mx-auto">
+                        <!-- Free -->
+                        <div class="bg-neutral-900/60 backdrop-blur-xl border border-white/5 rounded-2xl p-8 relative">
+                            <h3 class="text-xl font-bold text-white">Free</h3>
+                            <p class="text-neutral-400 text-sm mt-2">Basic needs</p>
+                            <div class="my-6">
+                                <span class="text-4xl font-black text-white">$0</span><span class="text-neutral-500">/mo</span>
                             </div>
-                            <input type="checkbox" id="setting-autodl" checked onchange="updateSetting('autoDownload', this.checked)" class="sr-only peer">
-                            <div class="relative w-11 h-6 bg-slate-700 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full rtl:peer-checked:after:-translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:start-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-indigo-500"></div>
-                        </label>
-                        <label class="flex items-center justify-between cursor-pointer pt-2">
-                            <div>
-                                <div class="text-sm font-medium text-slate-200">Preserve Metadata</div>
-                                <div class="text-xs text-slate-500 mt-0.5">Attempt to copy ID3 tags and album art.</div>
+                            <button class="w-full mb-8 py-3 bg-neutral-800 hover:bg-neutral-700 text-white border border-white/10 rounded-xl transition-all">Current Plan</button>
+                            <ul class="space-y-4 text-sm text-neutral-300">
+                                <li class="flex items-center gap-3"><i data-feather="check-circle" class="w-4 h-4 text-blue-400"></i> 50 Conversions/day</li>
+                                <li class="flex items-center gap-3"><i data-feather="check-circle" class="w-4 h-4 text-blue-400"></i> Standard Speed</li>
+                                <li class="flex items-center gap-3"><i data-feather="check-circle" class="w-4 h-4 text-blue-400"></i> Max 50MB file</li>
+                            </ul>
+                        </div>
+                        <!-- Pro -->
+                        <div class="bg-neutral-900/60 backdrop-blur-xl border border-blue-500/50 shadow-[0_0_30px_rgba(59,130,246,0.15)] rounded-2xl p-8 relative">
+                            <div class="absolute top-0 right-0 bg-blue-500 text-white text-[10px] font-bold px-3 py-1 rounded-bl-xl rounded-tr-xl">MOST POPULAR</div>
+                            <h3 class="text-xl font-bold text-white">Pro</h3>
+                            <p class="text-neutral-400 text-sm mt-2">Power users</p>
+                            <div class="my-6">
+                                <span class="text-4xl font-black text-white">$29</span><span class="text-neutral-500">/mo</span>
                             </div>
-                            <input type="checkbox" id="setting-meta" checked onchange="updateSetting('preserveMetadata', this.checked)" class="sr-only peer">
-                            <div class="relative w-11 h-6 bg-slate-700 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full rtl:peer-checked:after:-translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:start-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-indigo-500"></div>
-                        </label>
+                            <button class="w-full mb-8 py-3 bg-blue-600 hover:bg-blue-500 text-white shadow-[0_0_15px_rgba(37,99,235,0.4)] rounded-xl transition-all">Upgrade Now</button>
+                            <ul class="space-y-4 text-sm text-neutral-300">
+                                <li class="flex items-center gap-3"><i data-feather="check-circle" class="w-4 h-4 text-blue-400"></i> 10,000 Conversions/day</li>
+                                <li class="flex items-center gap-3"><i data-feather="check-circle" class="w-4 h-4 text-blue-400"></i> 10x Priority Queue</li>
+                                <li class="flex items-center gap-3"><i data-feather="check-circle" class="w-4 h-4 text-blue-400"></i> Max 2GB file</li>
+                                <li class="flex items-center gap-3"><i data-feather="check-circle" class="w-4 h-4 text-blue-400"></i> API Access</li>
+                            </ul>
+                        </div>
+                        <!-- Business -->
+                        <div class="bg-neutral-900/60 backdrop-blur-xl border border-white/5 rounded-2xl p-8 relative">
+                            <h3 class="text-xl font-bold text-white">Business</h3>
+                            <p class="text-neutral-400 text-sm mt-2">Enterprise scaling</p>
+                            <div class="my-6">
+                                <span class="text-4xl font-black text-white">$199</span><span class="text-neutral-500">/mo</span>
+                            </div>
+                            <button class="w-full mb-8 py-3 bg-neutral-800 hover:bg-neutral-700 text-white border border-white/10 rounded-xl transition-all">Upgrade Now</button>
+                            <ul class="space-y-4 text-sm text-neutral-300">
+                                <li class="flex items-center gap-3"><i data-feather="check-circle" class="w-4 h-4 text-blue-400"></i> Unlimited Conversions</li>
+                                <li class="flex items-center gap-3"><i data-feather="check-circle" class="w-4 h-4 text-blue-400"></i> Dedicated Worker Nodes</li>
+                                <li class="flex items-center gap-3"><i data-feather="check-circle" class="w-4 h-4 text-blue-400"></i> WordPress Plugin</li>
+                                <li class="flex items-center gap-3"><i data-feather="check-circle" class="w-4 h-4 text-blue-400"></i> SLA 99.9%</li>
+                            </ul>
+                        </div>
                     </div>
                 </div>
+
+                <!-- VIEW: Plugin -->
+                <div id="view-plugin" class="view-section max-w-4xl mx-auto fade-in">
+                    <div class="bg-neutral-900/60 backdrop-blur-xl border border-white/5 rounded-2xl p-8">
+                        <div class="flex items-start gap-6">
+                            <div class="w-16 h-16 rounded-2xl bg-[#0073AA]/20 flex items-center justify-center shrink-0 border border-[#0073AA]/30">
+                                <i data-feather="code" class="w-8 h-8 text-[#0073AA]"></i>
+                            </div>
+                            <div class="w-full">
+                                <h2 class="text-2xl font-bold text-white mb-2">WordPress Integration</h2>
+                                <p class="text-neutral-400 leading-relaxed">Connect your WordPress site directly to our processing API. Automatically convert uploaded videos to audio in your media library.</p>
+                                
+                                <div class="mt-8 space-y-6">
+                                    <div>
+                                        <label class="block text-sm font-medium text-neutral-300 mb-2">API Secret Key</label>
+                                        <div class="flex gap-2">
+                                            <input type="password" value="sk_live_8f92h8hf82h98fh298hf29" readonly class="flex-1 bg-neutral-900 border border-white/10 rounded-xl px-4 py-2 text-neutral-400 font-mono text-sm focus:outline-none">
+                                            <button class="px-4 py-2 bg-neutral-800 text-white rounded-xl text-sm border border-white/10 hover:bg-neutral-700">Regenerate</button>
+                                            <button class="px-4 py-2 bg-blue-600 text-white rounded-xl text-sm shadow-[0_0_15px_rgba(37,99,235,0.4)] hover:bg-blue-500">Copy</button>
+                                        </div>
+                                        <p class="text-xs text-neutral-500 mt-2">Do not share this key. It grants full access to your account limits.</p>
+                                    </div>
+                                    <div>
+                                        <label class="block text-sm font-medium text-neutral-300 mb-2">Shortcode Generator</label>
+                                        <div class="p-4 bg-neutral-900 rounded-xl border border-white/5 font-mono text-sm text-blue-400">
+                                            [mp4tomp3_uploader theme="dark" max_size="50MB"]
+                                        </div>
+                                    </div>
+                                    <div class="pt-4 border-t border-white/5">
+                                        <button class="inline-flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-xl text-sm font-medium hover:bg-blue-500 transition-all">
+                                            <i data-feather="download" class="w-4 h-4"></i> Download Plugin .zip
+                                        </button>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
             </div>
         </div>
-
     </main>
 
-    <!-- Mobile Nav -->
-    <div class="md:hidden fixed bottom-0 left-0 w-full bg-slate-950/80 backdrop-blur-xl border-t border-slate-800 z-50 px-6 py-3 pb-4 flex justify-between items-center" id="mobile-nav">
-        <!-- Generated by JS -->
-    </div>
-
+    <!-- App Logic -->
     <script>
-        // --- APP STATE ---
-        const state = {
-            tasks: {},
-            queue: [],
-            history: [],
-            logs: [
-                { level: 'info', message: 'Engine initialized v4.2.0', timestamp: Date.now() },
-                { level: 'success', message: 'WASM modules loaded successfully', timestamp: Date.now() }
-            ],
-            settings: {
-                maxConcurrent: 3,
-                audioBitrate: '320k',
-                autoDownload: true,
-                preserveMetadata: true
-            },
-            isProcessing: false
-        };
+        // Init Feather Icons
+        feather.replace();
 
-        // --- NAVIGATION LOGIC ---
-        const navItems = [
-            { id: 'converter', label: 'Converter', icon: 'ph-arrows-clockwise' },
-            { id: 'history', label: 'History', icon: 'ph-clock-counter-clockwise' },
-            { id: 'settings', label: 'Settings', icon: 'ph-gear' }
-        ];
-
-        let currentRoute = 'converter';
-
-        function renderNav() {
-            // Desktop
-            const dNav = document.getElementById('desktop-nav');
-            dNav.innerHTML = navItems.map(item => `
-                <button onclick="setRoute('${item.id}')" class="w-full flex items-center gap-3 px-4 py-3 rounded-xl transition-all duration-200 text-sm font-medium ${currentRoute === item.id ? 'bg-indigo-500/10 text-indigo-400 border border-indigo-500/20 shadow-inner' : 'text-slate-400 hover:text-slate-200 hover:bg-slate-800/50 border border-transparent'}">
-                    <i class="ph ${item.icon} text-lg"></i>
-                    ${item.label}
-                    ${currentRoute === item.id ? '<i class="ph ph-caret-right ml-auto opacity-50"></i>' : ''}
-                </button>
-            `).join('');
-
-            // Mobile
-            const mNav = document.getElementById('mobile-nav');
-            mNav.innerHTML = navItems.map(item => `
-                <button onclick="setRoute('${item.id}')" class="p-3 rounded-xl transition-colors ${currentRoute === item.id ? 'bg-indigo-500/20 text-indigo-400' : 'text-slate-500'}">
-                    <i class="ph ${item.icon} text-2xl"></i>
-                </button>
-            `).join('');
-
-            // Pages
-            document.querySelectorAll('.page').forEach(page => page.classList.remove('active'));
-            document.getElementById(`page-${currentRoute}`).classList.add('active');
-        }
-
-        function setRoute(route) {
-            currentRoute = route;
-            renderNav();
-            if(route === 'history') renderHistory();
-        }
-
-        // --- UTILS ---
-        const Utils = {
-            generateId: () => Math.random().toString(36).substring(2, 15),
-            formatBytes: (bytes) => {
-                if (bytes === 0) return '0 Bytes';
-                const k = 1024, sizes = ['Bytes', 'KB', 'MB', 'GB'];
-                const i = Math.floor(Math.log(bytes) / Math.log(k));
-                return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
-            },
-            formatTime: (seconds) => {
-                if (!seconds || seconds < 0) return '00:00';
-                const m = Math.floor(seconds / 60).toString().padStart(2, '0');
-                const s = Math.floor(seconds % 60).toString().padStart(2, '0');
-                return `${m}:${s}`;
-            },
-            sleep: ms => new Promise(resolve => setTimeout(resolve, ms))
-        };
-
-        // --- TOASTS ---
-        function addToast(type, title, message) {
-            const id = Utils.generateId();
-            const container = document.getElementById('toast-container');
-            const toast = document.createElement('div');
+        // 1. View Navigation Logic
+        function switchView(viewId) {
+            // Hide all views
+            document.querySelectorAll('.view-section').forEach(el => el.classList.remove('active'));
+            // Show target view
+            document.getElementById(`view-${viewId}`).classList.add('active');
             
-            const icons = {
-                success: '<i class="ph ph-check-circle text-emerald-400 text-xl"></i>',
-                error: '<i class="ph ph-warning-circle text-red-400 text-xl"></i>',
-                info: '<i class="ph ph-info text-blue-400 text-xl"></i>'
-            };
-            const bgClasses = {
-                success: "bg-emerald-950/80 border-emerald-900/50",
-                error: "bg-red-950/80 border-red-900/50",
-                info: "bg-slate-900/90 border-slate-800"
-            };
-
-            toast.className = `flex items-start gap-3 p-4 rounded-xl border backdrop-blur-xl shadow-2xl toast-enter min-w-[300px] max-w-md ${bgClasses[type]}`;
-            toast.id = `toast-${id}`;
-            toast.innerHTML = `
-                <div class="shrink-0 mt-0.5">${icons[type]}</div>
-                <div class="flex-1">
-                    <h4 class="text-sm font-medium text-slate-200">${title}</h4>
-                    <p class="text-xs text-slate-400 mt-1 leading-relaxed">${message}</p>
-                </div>
-                <button onclick="document.getElementById('toast-${id}').remove()" class="text-slate-500 hover:text-slate-300">
-                    <i class="ph ph-x"></i>
-                </button>
-            `;
-            container.appendChild(toast);
-            setTimeout(() => { if (document.getElementById(`toast-${id}`)) document.getElementById(`toast-${id}`).remove(); }, 5000);
+            // Update nav buttons
+            document.querySelectorAll('.nav-btn').forEach(btn => {
+                if(btn.dataset.target === viewId) {
+                    btn.className = "nav-btn active w-full flex items-center gap-3 px-4 py-3 rounded-xl transition-all text-sm font-medium bg-blue-600 text-white shadow-[0_0_15px_rgba(37,99,235,0.3)]";
+                    if(!btn.innerHTML.includes('chevron-right')) btn.innerHTML += '<i data-feather="chevron-right" class="w-4 h-4 ml-auto opacity-50"></i>';
+                } else {
+                    btn.className = "nav-btn w-full flex items-center gap-3 px-4 py-3 rounded-xl transition-all text-sm font-medium text-neutral-400 hover:bg-white/5 hover:text-white";
+                    const chevron = btn.querySelector('.feather-chevron-right');
+                    if(chevron) chevron.remove();
+                }
+            });
+            feather.replace();
         }
 
-        function addLog(level, message) {
-            state.logs.push({ level, message, timestamp: Date.now() });
-            if (state.logs.length > 100) state.logs.shift(); // Keep last 100
-            renderLogs();
-        }
+        // 2. Utils & Mock Data for Analytics
+        const formatBytes = (bytes, decimals = 2) => {
+            if (bytes === 0) return '0 Bytes';
+            const k = 1024, dm = decimals < 0 ? 0 : decimals, sizes = ['Bytes', 'KB', 'MB', 'GB', 'TB'];
+            const i = Math.floor(Math.log(bytes) / Math.log(k));
+            return parseFloat((bytes / Math.pow(k, i)).toFixed(dm)) + ' ' + sizes[i];
+        };
+        const generateId = () => Math.random().toString(36).substring(2, 15);
 
-        function renderLogs() {
-            const terminal = document.getElementById('terminal-logs');
-            terminal.innerHTML = state.logs.map(log => {
-                const time = new Date(log.timestamp).toISOString().split('T')[1].substring(0,8);
-                const colors = { info: 'text-blue-400', success: 'text-emerald-400', warn: 'text-amber-400', error: 'text-red-400 font-bold' };
-                return `
-                    <div class="mb-1 flex gap-3 hover:bg-white/5 px-1 -mx-1 rounded">
-                        <span class="text-slate-600 shrink-0">[${time}]</span>
-                        <span class="shrink-0 w-16 uppercase ${colors[log.level]}">${log.level}</span>
-                        <span class="text-slate-300 break-words">${log.message}</span>
+        // Generate Mock Chart
+        const chartContainer = document.getElementById('mock-chart');
+        for(let i=0; i<14; i++) {
+            const success = Math.floor(Math.random() * 500) + 100;
+            const heightPct = (success / 600) * 100;
+            const date = new Date(Date.now() - (13 - i) * 86400000).toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+            chartContainer.innerHTML += `
+                <div class="flex-1 flex flex-col items-center gap-2 group h-full">
+                    <div class="w-full relative flex-1 flex items-end">
+                        <div style="height: ${heightPct}%" class="w-full bg-blue-500/50 hover:bg-blue-400 rounded-t-md relative group-hover:shadow-[0_0_15px_rgba(59,130,246,0.5)] transition-all fade-in" style="animation-delay: ${i*0.05}s">
+                            <div class="absolute -top-10 left-1/2 -translate-x-1/2 bg-neutral-800 text-xs px-2 py-1 rounded opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap z-10 border border-white/10">
+                                ${success} conversions
+                            </div>
+                        </div>
                     </div>
-                `;
-            }).join('');
-            terminal.scrollTop = terminal.scrollHeight;
+                    <span class="text-[10px] text-neutral-500 -rotate-45 mt-4">${date}</span>
+                </div>
+            `;
         }
 
-        // --- FILE HANDLING & DRAG DROP ---
+        // 3. Queue Management System
+        let queue = [];
+        const engineJobs = new Map();
+
+        // Drag & Drop Handlers
         const dropzone = document.getElementById('dropzone');
-        const fileInput = document.getElementById('fileInput');
-
-        ['dragenter', 'dragover', 'dragleave', 'drop'].forEach(eventName => {
-            dropzone.addEventListener(eventName, preventDefaults, false);
+        dropzone.addEventListener('dragover', (e) => {
+            e.preventDefault();
+            dropzone.classList.add('border-blue-500', 'bg-blue-500/10');
         });
-
-        function preventDefaults(e) { e.preventDefault(); e.stopPropagation(); }
-
-        ['dragenter', 'dragover'].forEach(eventName => {
-            dropzone.addEventListener(eventName, () => {
-                dropzone.classList.add('border-indigo-500', 'bg-indigo-500/10');
-                document.getElementById('dropzone-icon').classList.add('bg-indigo-500/20', 'scale-110');
-            }, false);
+        dropzone.addEventListener('dragleave', (e) => {
+            e.preventDefault();
+            dropzone.classList.remove('border-blue-500', 'bg-blue-500/10');
         });
-
-        ['dragleave', 'drop'].forEach(eventName => {
-            dropzone.addEventListener(eventName, () => {
-                dropzone.classList.remove('border-indigo-500', 'bg-indigo-500/10');
-                document.getElementById('dropzone-icon').classList.remove('bg-indigo-500/20', 'scale-110');
-            }, false);
+        dropzone.addEventListener('drop', (e) => {
+            e.preventDefault();
+            dropzone.classList.remove('border-blue-500', 'bg-blue-500/10');
+            if (e.dataTransfer.files.length) handleFiles(e.dataTransfer.files);
         });
-
-        dropzone.addEventListener('drop', (e) => handleFiles(e.dataTransfer.files), false);
-        fileInput.addEventListener('change', (e) => handleFiles(e.target.files), false);
 
         function handleFiles(files) {
-            const validFiles = Array.from(files).filter(file => {
-                if (!file.type.includes('video/') && !file.name.toLowerCase().endsWith('.mp4')) {
-                    addToast('error', 'Invalid File', `${file.name} is not an MP4 video.`);
-                    return false;
-                }
-                return true;
-            });
-
-            if(validFiles.length > 0) {
-                validFiles.forEach(file => {
-                    const id = Utils.generateId();
-                    state.tasks[id] = { id, file, originalName: file.name, size: file.size, status: 'queued', progress: 0, speed: 0, eta: 0 };
-                    state.queue.push(id);
+            Array.from(files).forEach(f => {
+                queue.unshift({
+                    id: generateId(), name: f.name, size: f.size, 
+                    status: 'waiting', progress: 0, speed: '0 MB/s', eta: '--'
                 });
-                addToast('info', 'Files Queued', `Added ${validFiles.length} file(s) to queue.`);
-                updateQueueUI();
-                processQueue();
-            }
+            });
+            renderQueue();
         }
 
-        // --- QUEUE & PROCESSING ENGINE ---
-        function updateQueueUI() {
-            const container = document.getElementById('queue-container');
-            const list = document.getElementById('tasks-list');
-            const stats = document.getElementById('queue-stats');
-            
-            const tasksList = Object.values(state.tasks);
-            if (tasksList.length === 0) {
-                container.classList.add('hidden');
-                return;
+        // Processing Logic Loop
+        setInterval(() => {
+            const activeJobs = queue.filter(j => j.status === 'processing');
+            if (activeJobs.length < 3) {
+                const nextJob = queue.find(j => j.status === 'waiting');
+                if (nextJob) startJob(nextJob.id);
             }
-            container.classList.remove('hidden');
+        }, 1000);
 
-            const active = tasksList.filter(t => t.status === 'processing').length;
-            const queued = tasksList.filter(t => t.status === 'queued').length;
+        function startJob(id) {
+            const jobIndex = queue.findIndex(j => j.id === id);
+            if(jobIndex === -1) return;
+            
+            queue[jobIndex].status = 'processing';
+            const baseSpeed = queue[jobIndex].size / (1024 * 1024) > 50 ? 0.5 : 2;
+            
+            const interval = setInterval(() => {
+                const j = queue.find(x => x.id === id);
+                if(!j || j.status !== 'processing') return;
 
-            stats.innerHTML = `
-                <span class="px-2.5 py-0.5 rounded-full text-xs font-medium border backdrop-blur-sm bg-blue-500/10 text-blue-400 border-blue-500/20">${active} Processing</span>
-                <span class="px-2.5 py-0.5 rounded-full text-xs font-medium border backdrop-blur-sm bg-slate-800/50 text-slate-400 border-slate-700">${queued} Queued</span>
-            `;
-
-            list.innerHTML = tasksList.map(task => {
-                const statusColors = { queued: 'text-slate-400', processing: 'text-indigo-400', completed: 'text-emerald-400', error: 'text-red-400' };
-                const barColors = { queued: 'bg-slate-500', processing: 'bg-indigo-500', completed: 'bg-emerald-500', error: 'bg-red-500' };
+                j.progress += Math.random() * baseSpeed + 0.5;
                 
-                return `
-                <div class="p-4 border-b border-slate-800/50 last:border-0 hover:bg-slate-800/20 transition-colors group" id="task-${task.id}">
-                    <div class="flex items-center justify-between mb-3">
-                        <div class="flex items-center gap-3 overflow-hidden">
-                            <div class="p-2.5 rounded-xl bg-slate-900 border border-slate-700/50 ${statusColors[task.status]}">
-                                <i class="ph ${task.status === 'completed' ? 'ph-file-audio' : 'ph-file-video'} text-xl"></i>
-                            </div>
-                            <div class="min-w-0">
-                                <h4 class="text-sm font-medium text-slate-200 truncate pr-4">${task.originalName}</h4>
-                                <div class="flex items-center gap-3 text-xs text-slate-500 mt-1">
-                                    <span>${Utils.formatBytes(task.size)}</span>
-                                    <span class="w-1 h-1 rounded-full bg-slate-700"></span>
-                                    <span class="uppercase tracking-wider font-semibold">${task.status}</span>
-                                    ${task.status === 'processing' ? `
-                                        <span class="w-1 h-1 rounded-full bg-slate-700"></span>
-                                        <span class="text-indigo-400">${Utils.formatBytes(task.speed)}/s</span>
-                                        <span class="w-1 h-1 rounded-full bg-slate-700"></span>
-                                        <span class="text-slate-400">ETA: ${Utils.formatTime(task.eta)}</span>
-                                    ` : ''}
-                                </div>
-                            </div>
+                if (j.progress >= 100) {
+                    j.progress = 100;
+                    j.status = 'completed';
+                    j.speed = '0 MB/s';
+                    j.eta = '0s';
+                    clearInterval(interval);
+                    engineJobs.delete(id);
+                } else {
+                    const speedMb = (Math.random() * 5 + 2).toFixed(1);
+                    j.speed = `${speedMb} MB/s`;
+                    j.eta = `${Math.max(1, Math.floor((100 - j.progress) / (parseFloat(speedMb) * 2)))}s`;
+                }
+                updateJobDOM(j);
+            }, 200);
+            
+            engineJobs.set(id, interval);
+            renderQueue();
+        }
+
+        // Job Actions
+        window.pauseJob = (id) => {
+            const job = queue.find(j => j.id === id);
+            if(job) {
+                job.status = 'paused';
+                clearInterval(engineJobs.get(id));
+                renderQueue();
+            }
+        };
+        window.resumeJob = (id) => {
+            const job = queue.find(j => j.id === id);
+            if(job) {
+                job.status = 'waiting';
+                renderQueue();
+            }
+        };
+        window.cancelJob = (id) => {
+            clearInterval(engineJobs.get(id));
+            engineJobs.delete(id);
+            queue = queue.filter(j => j.id !== id);
+            renderQueue();
+        };
+        window.clearCompleted = () => {
+            queue = queue.filter(j => j.status !== 'completed' && j.status !== 'failed');
+            renderQueue();
+        };
+
+        // 4. Rendering Logic
+        function getBadge(status) {
+            const styles = {
+                waiting: 'bg-neutral-500/20 text-neutral-400 border-neutral-500/30',
+                processing: 'bg-blue-500/20 text-blue-400 border-blue-500/30 animate-pulse',
+                completed: 'bg-emerald-500/20 text-emerald-400 border-emerald-500/30',
+                failed: 'bg-red-500/20 text-red-400 border-red-500/30',
+                paused: 'bg-amber-500/20 text-amber-400 border-amber-500/30'
+            };
+            return `<span class="px-2.5 py-0.5 rounded-full text-xs font-medium border ${styles[status]}">${status.toUpperCase()}</span>`;
+        }
+
+        function createJobHTML(job) {
+            let actions = '';
+            if(job.status === 'processing') actions += `<button onclick="pauseJob('${job.id}')" class="p-2 bg-neutral-800 hover:bg-neutral-700 text-white rounded-xl border border-white/10"><i data-feather="pause" class="w-4 h-4"></i></button>`;
+            if(job.status === 'paused') actions += `<button onclick="resumeJob('${job.id}')" class="p-2 bg-blue-600 hover:bg-blue-500 text-white rounded-xl shadow-[0_0_15px_rgba(37,99,235,0.4)]"><i data-feather="play" class="w-4 h-4"></i></button>`;
+            if(job.status === 'completed') actions += `<button class="p-2 bg-blue-600 hover:bg-blue-500 text-white rounded-xl shadow-[0_0_15px_rgba(37,99,235,0.4)]"><i data-feather="download" class="w-4 h-4"></i></button>`;
+            actions += `<button onclick="cancelJob('${job.id}')" class="p-2 hover:bg-white/5 text-neutral-500 hover:text-white rounded-xl"><i data-feather="x" class="w-4 h-4"></i></button>`;
+
+            const icon = job.status === 'completed' ? `<i data-feather="check-circle" class="w-5 h-5 text-emerald-400"></i>` : `<i data-feather="music" class="w-5 h-5 text-blue-400"></i>`;
+            const barColor = job.status === 'completed' ? 'bg-emerald-500' : job.status === 'failed' ? 'bg-red-500' : 'bg-gradient-to-r from-blue-600 to-cyan-400';
+
+            return `
+            <div id="job-${job.id}" class="p-4 bg-neutral-800/40 rounded-xl border border-white/5 hover:bg-neutral-800/60 transition-colors fade-in">
+                <div class="flex items-center justify-between mb-3">
+                    <div class="flex items-center gap-3">
+                        <div class="w-10 h-10 rounded-lg bg-gradient-to-br from-blue-500/20 to-purple-500/20 flex items-center justify-center border border-white/10">
+                            ${icon}
                         </div>
-                        <div class="flex items-center gap-2">
-                            ${task.status === 'completed' && task.outputUrl ? `
-                                <a href="${task.outputUrl}" download="${task.originalName.replace(/\.mp4$/i, '.mp3')}" class="p-2 text-slate-400 hover:text-emerald-400 hover:bg-emerald-500/10 rounded-lg transition-colors">
-                                    <i class="ph ph-download-simple text-lg"></i>
-                                </a>
-                            ` : ''}
-                            <button onclick="removeTask('${task.id}')" class="p-2 text-slate-500 hover:text-red-400 hover:bg-red-500/10 rounded-lg transition-colors opacity-0 group-hover:opacity-100">
-                                <i class="ph ph-trash text-lg"></i>
-                            </button>
+                        <div>
+                            <h4 class="text-sm font-medium text-white truncate max-w-[200px] sm:max-w-xs">${job.name}</h4>
+                            <div class="text-xs text-neutral-400 flex items-center gap-2 mt-0.5" id="job-meta-${job.id}">
+                                <span>${formatBytes(job.size)}</span> • ${getBadge(job.status)}
+                            </div>
                         </div>
                     </div>
-                    <div class="flex items-center gap-4">
-                        <div class="w-full bg-slate-900/50 rounded-full h-2.5 border border-slate-800 overflow-hidden flex-1">
-                            <div class="h-full rounded-full transition-all duration-500 ease-out ${barColors[task.status]} relative overflow-hidden" style="width: ${task.progress}%">
-                                ${task.status === 'processing' ? '<div class="absolute inset-0 w-full h-full animate-shimmer"></div>' : ''}
-                            </div>
-                        </div>
-                        <span class="text-xs font-mono font-medium text-slate-400 w-10 text-right">${task.progress}%</span>
-                    </div>
-                    ${task.error ? `
-                        <div class="mt-2 text-xs text-red-400 bg-red-500/10 border border-red-500/20 px-3 py-2 rounded-lg flex items-start gap-2">
-                           <i class="ph ph-warning-circle text-base shrink-0"></i> <span>${task.error}</span>
-                        </div>
-                    ` : ''}
+                    <div class="flex items-center gap-2" id="job-actions-${job.id}">${actions}</div>
                 </div>
+                <div class="relative h-2 bg-neutral-900 rounded-full overflow-hidden">
+                    <div id="job-bar-${job.id}" class="absolute top-0 left-0 h-full rounded-full ${barColor} transition-all duration-200" style="width: ${job.progress}%"></div>
+                </div>
+                <div class="flex justify-between items-center mt-2 text-xs text-neutral-500" id="job-stats-${job.id}">
+                    <div class="flex gap-4">
+                        <span class="font-mono text-blue-400 font-medium">${job.progress.toFixed(1)}%</span>
+                        ${job.status === 'processing' ? `<span>${job.speed}</span>` : ''}
+                    </div>
+                    ${job.status === 'processing' ? `<span>ETA: ${job.eta}</span>` : ''}
+                </div>
+            </div>`;
+        }
+
+        // Fast update for progressing jobs (avoids full re-render)
+        function updateJobDOM(job) {
+            const bar = document.getElementById(`job-bar-${job.id}`);
+            const stats = document.getElementById(`job-stats-${job.id}`);
+            if(bar && stats) {
+                bar.style.width = `${job.progress}%`;
+                stats.innerHTML = `
+                    <div class="flex gap-4">
+                        <span class="font-mono text-blue-400 font-medium">${job.progress.toFixed(1)}%</span>
+                        ${job.status === 'processing' ? `<span>${job.speed}</span>` : ''}
+                    </div>
+                    ${job.status === 'processing' ? `<span>ETA: ${job.eta}</span>` : ''}
                 `;
-            }).join('');
-        }
-
-        function removeTask(id) {
-            delete state.tasks[id];
-            state.queue = state.queue.filter(qId => qId !== id);
-            updateQueueUI();
-        }
-
-        async function processQueue() {
-            if (state.isProcessing) return;
-            state.isProcessing = true;
-
-            while(true) {
-                const activeCount = Object.values(state.tasks).filter(t => t.status === 'processing').length;
-                const queued = state.queue.filter(id => state.tasks[id] && state.tasks[id].status === 'queued');
-
-                if (queued.length === 0 || activeCount >= state.settings.maxConcurrent) {
-                    break;
-                }
-
-                const capacity = state.settings.maxConcurrent - activeCount;
-                const toProcess = queued.slice(0, capacity);
-
-                toProcess.forEach(id => {
-                    simulateEngine(id);
-                });
-                
-                await Utils.sleep(100); // Small buffer before checking queue again
+                if(job.progress >= 100) renderQueue(); // Full re-render to move to finished list
             }
-
-            state.isProcessing = false;
         }
 
-        // The Mock WebAssembly Engine
-        async function simulateEngine(id) {
-            const task = state.tasks[id];
-            task.status = 'processing';
-            updateQueueUI();
-            addLog('info', `Starting conversion job for ${task.originalName}`);
-
-            // Update mem visually
-            document.getElementById('mem-value').innerText = `${Math.floor(40 + Math.random()*30)}%`;
-            document.getElementById('mem-bar').style.width = document.getElementById('mem-value').innerText;
-
-            const totalChunks = 100;
-            let currentChunk = 0;
-            const baseSpeed = task.size / 20;
-
-            await Utils.sleep(800);
-            addLog('info', `Analyzing media streams for ${task.originalName}...`);
-            await Utils.sleep(500);
-
-            try {
-                if (Math.random() < 0.05) throw new Error("No audio stream found in the video file.");
-                addLog('success', 'Found active AAC audio stream. Starting extraction.');
-
-                while (currentChunk < totalChunks) {
-                    if(!state.tasks[id]) return; // Cancelled
-                    await Utils.sleep(Math.random() * 200 + 50);
-                    currentChunk += Math.random() * 8 + 2;
-                    
-                    if (currentChunk > totalChunks) currentChunk = totalChunks;
-                    
-                    const progress = Math.min(Math.round(currentChunk), 100);
-                    const speed = baseSpeed * (0.8 + Math.random() * 0.4);
-                    const eta = (task.size * (1 - (progress / 100))) / speed;
-
-                    task.progress = progress;
-                    task.speed = speed;
-                    task.eta = eta;
-
-                    if (progress === 100) {
-                        addLog('success', `Finalizing MP3 muxing for ${task.originalName}`);
-                    } else if (Math.random() < 0.1) {
-                         addLog('info', `Demuxing packet ${Math.floor(progress * 1000)}/100000... frame rate stable.`);
-                    }
-                    
-                    updateQueueUI();
-
-                    if (Math.random() < 0.005) throw new Error("Segmentation fault in WebAssembly memory block");
-                }
-
-                await Utils.sleep(500);
-                
-                // Finish
-                task.status = 'completed';
-                task.progress = 100;
-                task.outputUrl = URL.createObjectURL(new Blob(["mock-audio"], { type: "audio/mp3" }));
-                addLog('success', `Job completed successfully: ${task.originalName}`);
-                
-                if(state.settings.autoDownload) {
-                    const a = document.createElement('a');
-                    a.href = task.outputUrl;
-                    a.download = task.originalName.replace(/\.mp4$/i, '.mp3');
-                    a.click();
-                }
-
-            } catch (err) {
-                task.status = 'error';
-                task.error = err.message;
-                addLog('error', `Job Failed (${task.originalName}): ${err.message}`);
-                addToast('error', 'Conversion Error', err.message);
-            }
-
-            // Move to history
-            state.history.unshift({
-                ...task, date: Date.now()
-            });
-
-            updateQueueUI();
+        function renderQueue() {
+            const activeList = document.getElementById('active-queue-list');
+            const finishedList = document.getElementById('finished-queue-list');
+            const activeSpinner = document.getElementById('active-spinner');
             
-            // Re-trigger queue processing
-            document.getElementById('mem-value').innerText = `35%`;
-            document.getElementById('mem-bar').style.width = '35%';
-            processQueue();
-        }
+            const activeJobs = queue.filter(j => j.status !== 'completed' && j.status !== 'failed');
+            const finishedJobs = queue.filter(j => j.status === 'completed' || j.status === 'failed');
 
-        // --- HISTORY PAGE ---
-        function renderHistory() {
-            const tbody = document.getElementById('history-table');
-            if (state.history.length === 0) {
-                tbody.innerHTML = `<tr><td colspan="4" class="p-8 text-center text-slate-500">No history found. Convert some files first.</td></tr>`;
-                return;
+            document.getElementById('active-count').innerText = activeJobs.length;
+            
+            if(activeJobs.length > 0) {
+                activeSpinner.classList.add('animate-spin-slow', 'text-blue-400');
+                activeSpinner.classList.remove('text-neutral-500');
+                activeList.innerHTML = activeJobs.map(createJobHTML).join('');
+            } else {
+                activeSpinner.classList.remove('animate-spin-slow', 'text-blue-400');
+                activeSpinner.classList.add('text-neutral-500');
+                activeList.innerHTML = `<div class="h-full flex flex-col items-center justify-center text-neutral-500 space-y-4"><i data-feather="server" class="w-12 h-12 opacity-20"></i><p>Queue is empty. Upload files to begin.</p></div>`;
             }
 
-            tbody.innerHTML = state.history.map(item => `
-                <tr class="hover:bg-slate-800/20 transition-colors">
-                    <td class="p-4">
-                        <div class="flex items-center gap-3">
-                            <div class="p-2 rounded-lg ${item.status === 'completed' ? 'bg-emerald-500/10 text-emerald-400' : 'bg-red-500/10 text-red-400'}">
-                                <i class="ph ${item.status === 'completed' ? 'ph-file-audio' : 'ph-warning-circle'}"></i>
-                            </div>
-                            <span class="text-sm font-medium text-slate-300 truncate max-w-[200px] block" title="${item.originalName}">${item.originalName}</span>
-                        </div>
-                    </td>
-                    <td class="p-4 text-sm text-slate-400">
-                        ${new Date(item.date).toLocaleDateString()} <span class="text-slate-600">${new Date(item.date).toLocaleTimeString()}</span>
-                    </td>
-                    <td class="p-4 text-sm text-slate-400 font-mono">${Utils.formatBytes(item.size)}</td>
-                    <td class="p-4">
-                        <span class="px-2.5 py-0.5 rounded-full text-xs font-medium border backdrop-blur-sm flex items-center gap-1 w-max ${item.status === 'completed' ? 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20' : 'bg-red-500/10 text-red-400 border-red-500/20'}">
-                            ${item.status === 'completed' ? 'Success' : 'Failed'}
-                        </span>
-                    </td>
-                </tr>
-            `).join('');
+            if(finishedJobs.length > 0) {
+                finishedList.innerHTML = finishedJobs.map(createJobHTML).join('');
+            } else {
+                finishedList.innerHTML = `<div class="h-full flex items-center justify-center text-neutral-500"><p>No completed jobs yet.</p></div>`;
+            }
+
+            feather.replace();
         }
 
-        function clearHistory() {
-            state.history = [];
-            renderHistory();
-            addToast('info', 'History Cleared', 'All conversion history has been removed.');
-        }
-
-        // --- SETTINGS ---
-        function updateSetting(key, value) {
-            state.settings[key] = value;
-            if(key === 'maxConcurrent') document.getElementById('stat-concurrency').innerText = `${value} Threads`;
-            if(key === 'audioBitrate') document.getElementById('stat-bitrate').innerText = `${value} CBR`;
-            addToast('success', 'Settings Updated', `Preferences saved successfully.`);
-        }
-
-        // Init
-        renderNav();
-        renderLogs();
     </script>
 </body>
 </html>
